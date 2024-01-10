@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -564,10 +565,14 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		r.Sub(r, header.Number)
 		r.Mul(r, blockReward)
 		r.Div(r, big8)
+		uncleCoinbase := utils.GetTreeKeyBalance(uncle.Coinbase.Bytes())
+		state.Witness().TouchAddress(uncleCoinbase, state.GetBalance(uncle.Coinbase).Bytes())
 		state.AddBalance(uncle.Coinbase, r)
 
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
 	}
+	coinbase := utils.GetTreeKeyBalance(header.Coinbase.Bytes())
+	state.Witness().TouchAddress(coinbase, state.GetBalance(header.Coinbase).Bytes())
 	state.AddBalance(header.Coinbase, reward)
 }
