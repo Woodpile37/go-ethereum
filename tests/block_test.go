@@ -17,53 +17,77 @@
 package tests
 
 import (
+	"path/filepath"
 	"testing"
-
-	"github.com/ethereum/go-ethereum/core/rawdb"
 )
 
-func TestBlockchain(t *testing.T) {
-	t.Parallel()
+func TestBcValidBlockTests(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcValidBlockTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
-	bt := new(testMatcher)
-	// General state tests are 'exported' as blockchain tests, but we can run them natively.
-	// For speedier CI-runs, the line below can be uncommented, so those are skipped.
-	// For now, in hardfork-times (Berlin), we run the tests both as StateTests and
-	// as blockchain tests, since the latter also covers things like receipt root
-	bt.skipLoad(`^GeneralStateTests/`)
+func TestBcUncleHeaderValidityTests(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcUncleHeaderValiditiy.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
-	// Skip random failures due to selfish mining test
-	bt.skipLoad(`.*bcForgedTest/bcForkUncle\.json`)
+func TestBcInvalidHeaderTests(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcInvalidHeaderTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
-	// Slow tests
-	bt.slow(`.*bcExploitTest/DelegateCallSpam.json`)
-	bt.slow(`.*bcExploitTest/ShanghaiLove.json`)
-	bt.slow(`.*bcExploitTest/SuicideIssue.json`)
-	bt.slow(`.*/bcForkStressTest/`)
-	bt.slow(`.*/bcGasPricerTest/RPC_API_Test.json`)
-	bt.slow(`.*/bcWalletTest/`)
+func TestBcInvalidRLPTests(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcInvalidRLPTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
-	// Very slow test
-	bt.skipLoad(`.*/stTimeConsuming/.*`)
-	// test takes a lot for time and goes easily OOM because of sha3 calculation on a huge range,
-	// using 4.6 TGas
-	bt.skipLoad(`.*randomStatetest94.json.*`)
+func TestBcRPCAPITests(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcRPC_API_Test.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
-	bt.walk(t, blockTestDir, func(t *testing.T, name string, test *BlockTest) {
-		if err := bt.checkFailure(t, test.Run(false, rawdb.HashScheme, nil)); err != nil {
-			t.Errorf("test in hash mode without snapshotter failed: %v", err)
-		}
-		if err := bt.checkFailure(t, test.Run(true, rawdb.HashScheme, nil)); err != nil {
-			t.Errorf("test in hash mode with snapshotter failed: %v", err)
-		}
-		if err := bt.checkFailure(t, test.Run(false, rawdb.PathScheme, nil)); err != nil {
-			t.Errorf("test in path mode without snapshotter failed: %v", err)
-		}
-		if err := bt.checkFailure(t, test.Run(true, rawdb.PathScheme, nil)); err != nil {
-			t.Errorf("test in path mode with snapshotter failed: %v", err)
-		}
-	})
-	// There is also a LegacyTests folder, containing blockchain tests generated
-	// prior to Istanbul. However, they are all derived from GeneralStateTests,
-	// which run natively, so there's no reason to run them here.
+func TestBcForkBlockTests(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcForkBlockTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBcTotalDifficulty(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcTotalDifficultyTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBcWallet(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcWalletTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBcGasPricer(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "bcGasPricerTest.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TODO: iterate over files once we got more than a few
+func TestBcRandom(t *testing.T) {
+	err := RunBlockTest(filepath.Join(blockTestDir, "RandomTests/bl201507071825GO.json"), BlockSkipTests)
+	if err != nil {
+		t.Fatal(err)
+	}
 }

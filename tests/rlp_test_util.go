@@ -21,7 +21,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
+	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -42,24 +44,38 @@ type RLPTest struct {
 	Out string
 }
 
-// FromHex returns the bytes represented by the hexadecimal string s.
-// s may be prefixed with "0x".
-// This is copy-pasted from bytes.go, which does not return the error
-func FromHex(s string) ([]byte, error) {
-	if len(s) > 1 && (s[0:2] == "0x" || s[0:2] == "0X") {
-		s = s[2:]
+// RunRLPTest runs the tests in the given file, skipping tests by name.
+func RunRLPTest(file string, skip []string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
 	}
-	if len(s)%2 == 1 {
-		s = "0" + s
+	defer f.Close()
+	return RunRLPTestWithReader(f, skip)
+}
+
+// RunRLPTest runs the tests encoded in r, skipping tests by name.
+func RunRLPTestWithReader(r io.Reader, skip []string) error {
+	var tests map[string]*RLPTest
+	if err := readJson(r, &tests); err != nil {
+		return err
 	}
-	return hex.DecodeString(s)
+	for _, s := range skip {
+		delete(tests, s)
+	}
+	for name, test := range tests {
+		if err := test.Run(); err != nil {
+			return fmt.Errorf("test %q failed: %v", name, err)
+		}
+	}
+	return nil
 }
 
 // Run executes the test.
 func (t *RLPTest) Run() error {
-	outb, err := FromHex(t.Out)
+	outb, err := hex.DecodeString(t.Out)
 	if err != nil {
-		return errors.New("invalid hex in Out")
+		return fmt.Errorf("invalid hex in Out")
 	}
 
 	// Handle simple decoding tests with no actual In value.
@@ -87,7 +103,7 @@ func checkDecodeInterface(b []byte, isValid bool) error {
 	case isValid && err != nil:
 		return fmt.Errorf("decoding failed: %v", err)
 	case !isValid && err == nil:
-		return errors.New("decoding of invalid value succeeded")
+		return fmt.Errorf("decoding of invalid value succeeded")
 	}
 	return nil
 }
@@ -124,7 +140,7 @@ func translateJSON(v interface{}) interface{} {
 func checkDecodeFromJSON(s *rlp.Stream, exp interface{}) error {
 	switch exp := exp.(type) {
 	case uint64:
-		i, err := s.Uint64()
+		i, err := s.Uint()
 		if err != nil {
 			return addStack("Uint", exp, err)
 		}
